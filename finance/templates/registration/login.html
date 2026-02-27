@@ -1,37 +1,36 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Login - Tango Finance</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 50px; }
-        .error-msg { color: red; margin-bottom: 10px; }
-        input { padding: 8px; width: 250px; }
-        button { padding: 10px 20px; cursor: pointer; }
-    </style>
-</head>
-<body>
-    <h2>Login to Tango Finance</h2>
+{% extends 'layout/base.html' %}
 
-    {% if form.errors %}
-        <p class="error-msg">Invalid email or password. Please try again.</p>
-    {% endif %}
+{% block title %}Login - Tango Finance{% endblock %}
 
-    <form method="post">
-        {% csrf_token %}
-        <div>
-            <label for="id_username">Email Address:</label><br>
-            <input type="email" name="username" id="id_username" required autofocus>
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
+                    <h2 class="h4 mb-3">Login to Tango Finance</h2>
+
+                    {% if form.errors %}
+                        <div class="alert alert-danger">Invalid email or password. Please try again.</div>
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="id_username" class="form-label">Email Address</label>
+                            <input type="email" name="username" id="id_username" class="form-control" required autofocus>
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_password" class="form-label">Password</label>
+                            <input type="password" name="password" id="id_password" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Sign In</button>
+                    </form>
+
+                    <p class="small text-muted mt-3 mb-0">Don't have an account? <a href="{% url 'finance:register' %}">Register here</a></p>
+                </div>
+            </div>
         </div>
-        <br>
-        <div>
-            <label for="id_password">Password:</label><br>
-            <input type="password" name="password" id="id_password" required>
-        </div>
-        <br>
-        <button type="submit">Sign In</button>
-    </form>
-
-    <p>Don't have an account? <a href="{% url 'finance:register' %}">Register here</a></p>
-</body>
-</html>
+    </div>
+</div>
+{% endblock %}

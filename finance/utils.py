@@ -1,32 +1,58 @@
 import requests
 from decimal import Decimal
+import re
+
+
+TYPE_CANONICAL_MAP = {
+    "income": "Income",
+    "expense": "Expense",
+}
+
+INCOME_KEYWORDS = {
+    "income", "salary", "bonus", "refund", "reimburse", "reimbursement", "won",
+    "earn", "earned", "received", "receive", "dividend", "interest",
+}
+
+EXPENSE_KEYWORDS = {
+    "expense", "spent", "spend", "buy", "bought", "pay", "paid", "cost",
+    "purchase", "bill", "fee", "rent", "subscription",
+}
 
 def get_exchange_rate(from_currency, to_currency='GBP'):
-    """
-    使用 Frankfurter 开源 API 获取汇率 (无需 Key)
-    """
+    """Fetch exchange rate from Frankfurter API (no API key required)."""
     if from_currency == to_currency:
         return Decimal('1.0')
     
     try:
-        # Frankfurter 是专门处理汇率的开源 API
         url = f"https://api.frankfurter.app/latest?from={from_currency}&to={to_currency}"
         response = requests.get(url, timeout=5)
         
         if response.status_code == 200:
             data = response.json()
-            # 提取汇率并转为 Decimal 以保证金融计算精度
             rate = data['rates'].get(to_currency)
             if rate:
                 return Decimal(str(rate))
         
     except Exception as e:
-        print(f"汇率接口异常: {e}")
+        print(f"Exchange-rate API error: {e}")
     
-    # 兜底：如果网络断了，使用英国目前的大致汇率
+    # Fallback rates when network is unavailable.
     fallback = {
         'CNY': Decimal('0.11'),
         'USD': Decimal('0.79'),
         'EUR': Decimal('0.84')
     }
     return fallback.get(from_currency, Decimal('1.0'))
+
+
+def normalize_transaction_type(raw_type, context_text=""):
+    raw = (raw_type or "").strip().lower()
+    if raw in TYPE_CANONICAL_MAP:
+        return TYPE_CANONICAL_MAP[raw]
+
+    tokens = set(re.findall(r"[a-zA-Z]+", (context_text or "").lower()))
+    if tokens & INCOME_KEYWORDS:
+        return "Income"
+    if tokens & EXPENSE_KEYWORDS:
+        return "Expense"
+    return "Expense"

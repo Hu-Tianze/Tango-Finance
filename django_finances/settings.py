@@ -12,7 +12,12 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 import os
-from dotenv import load_dotenv
+
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    def load_dotenv(*args, **kwargs):
+        return False
 
 load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -36,11 +41,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     
-    # 你的应用
     'finance', 
     'user',
     
-    # 新增加的
     'rest_framework',
     'rest_framework.authtoken',
 ]
@@ -124,11 +127,11 @@ STATIC_URL = 'static/'
 AUTH_USER_MODEL = 'user.User'  
 
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.office365.com'  # Outlook 的 SMTP 服务器
+# EMAIL_HOST = 'smtp.office365.com'
 # EMAIL_PORT = 587
 # EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = '3149288H@student.gla.ac.uk'  # 你的 Outlook 邮箱地址
-# EMAIL_HOST_PASSWORD = 'hflw tbsn wxpb fhig'      # 注意：仍然建议使用“应用密码”
+# EMAIL_HOST_USER = '3149288H@student.gla.ac.uk'
+# EMAIL_HOST_PASSWORD = 'hflw tbsn wxpb fhig'
 
 #Testing email otp
 #TODO: Replace it with a real email
@@ -149,7 +152,7 @@ SESSION_SAVE_EVERY_REQUEST = True
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1", # 建议用 1 号数据库，和 0 号 Session 区分开
+        "LOCATION": "redis://127.0.0.1:6379/1",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
@@ -163,7 +166,7 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication', # 建议 Agent 使用 Token 认证
+        'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
 }

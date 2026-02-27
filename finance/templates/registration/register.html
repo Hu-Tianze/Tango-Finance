@@ -1,130 +1,77 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Register - Tango Finance</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-    <style>
-        #send-btn:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
-        .turnstile-container {
-            margin: 15px 0;
-        }
-    </style>
-</head>
-<body>
-    <h2>User Registration</h2>
-    <form method="post">
-        {% csrf_token %}
-        <div>
-            <label for="email">Email Address:</label><br>
-            <input type="email" name="email" id="email" placeholder="e.g. 3149288H@student.gla.ac.uk" required>
-            
-            <div class="turnstile-container">
-                <div class="cf-turnstile" data-sitekey="0x4AAAAAACXuYkMEKTmY4upa"></div>
+{% extends 'layout/base.html' %}
+{% load static %}
+
+{% block title %}Register - Tango Finance{% endblock %}
+
+{% block head_extra %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
+                    <h2 class="h4 mb-3">User Registration</h2>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email Address</label>
+                            <input type="email" name="email" id="email" class="form-control" placeholder="e.g. 3149288H@student.gla.ac.uk" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="cf-turnstile" data-sitekey="0x4AAAAAACXuYkMEKTmY4upa"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <button type="button" id="send-btn" class="btn btn-outline-primary">Get a One-Time Code</button>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Nickname</label>
+                            <input type="text" name="name" id="name" class="form-control" placeholder="How should I call you?" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="code" class="form-label">Verification Code</label>
+                            <input type="text" name="code" id="code" class="form-control" placeholder="Enter 6-digit code" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" name="password" id="password" class="form-control" placeholder="Set your password" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">Register Now</button>
+                    </form>
+
+                    <div class="mt-3">
+                        <p class="small text-muted mb-0">Already have an account? <a href="{% url 'login' %}">Sign in here</a></p>
+                    </div>
+
+                    {% if messages %}
+                        <div class="mt-3">
+                            {% for message in messages %}
+                                <div class="alert alert-{% if message.tags == 'success' %}success{% else %}danger{% endif %} py-2 mb-2">
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
             </div>
-
-            <button type="button" id="send-btn">Get a One-Time Code</button>
         </div>
-        <br>
-        
-        <div>
-            <label for="name">Nickname:</label><br>
-            <input type="text" name="name" id="name" placeholder="How should I call you?" required>
-        </div>
-        <br>
-
-        <div>
-            <label for="code">Verification Code:</label><br>
-            <input type="text" name="code" placeholder="Enter 6-digit code" required>
-        </div>
-        <br>
-
-        <div>
-            <label for="password">Password:</label><br>
-            <input type="password" name="password" placeholder="Set your password" required>
-        </div>
-        <br>
-        
-        <button type="submit" style="padding: 10px 20px;">Register Now</button>
-    </form>
-
-    <div style="margin-top: 15px;">
-        <p>Already have an account? <a href="{% url 'login' %}" style="color: #007bff; text-decoration: none; font-weight: bold;">Sign In here &rarr;</a></p>
     </div>
+</div>
+<div id="register-config"
+     data-send-code-url="{% url 'finance:send_code' %}"
+     data-csrf-token="{{ csrf_token }}">
+</div>
+{% endblock %}
 
-    {% if messages %}
-        <div style="margin-top: 20px;">
-            {% for message in messages %}
-                <p style="color: {% if message.tags == 'success' %}green{% else %}red{% endif %};">
-                    {{ message }}
-                </p>
-            {% endfor %}
-        </div>
-    {% endif %}
-
-    <script>
-        $(document).ready(function() {
-            var countdown = 60;
-            var timer = null;
-
-            function setCountdown() {
-                var btn = $('#send-btn');
-                if (countdown == 0) {
-                    btn.prop('disabled', false);
-                    btn.text("Get a One-Time Code");
-                    countdown = 60;
-                    clearInterval(timer);
-                    return;
-                } else {
-                    btn.prop('disabled', true);
-                    btn.text("Resend in " + countdown + "s");
-                    countdown--;
-                }
-            }
-
-            $('#send-btn').click(function() {
-                var email = $('#email').val();
-                // 3. 提取 Turnstile Token
-                var cfToken = $('[name="cf-turnstile-response"]').val();
-
-                if (!email) { 
-                    alert("Please enter a valid email address first."); 
-                    return; 
-                }
-                
-                if (!cfToken) {
-                    alert("Please complete the security check first!");
-                    return;
-                }
-                
-                var btn = $(this);
-                btn.prop('disabled', true).text("Verifying...");
-                
-                // 4. 发送 POST 请求（包含 Email, Token 和 CSRF）
-                $.post("/finance/send_code/", {
-                    email: email,
-                    cf_token: cfToken,
-                    csrfmiddlewaretoken: '{{ csrf_token }}'
-                }, function(data) {
-                    if (data.status == 'success') {
-                        alert("Code sent! Please check your console (terminal).");
-                        timer = setInterval(setCountdown, 1000);
-                    } else {
-                        alert("Error: " + (data.message || "Failed to send code."));
-                        btn.prop('disabled', false).text("Get a One-Time Code");
-                        // 如果失败，重置验证码
-                        if(typeof turnstile !== 'undefined') turnstile.reset();
-                    }
-                }).fail(function() {
-                    alert("Server error. Please try again later.");
-                    btn.prop('disabled', false).text("Get a One-Time Code");
-                });
-            });
-        });
-    </script>
-</body>
-</html>
+{% block extra_js %}
+<script src="{% static 'finance/js/register.js' %}"></script>
+{% endblock %}

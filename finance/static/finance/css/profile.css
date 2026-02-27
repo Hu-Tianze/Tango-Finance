@@ -1,0 +1,7 @@
+.card { border-radius: 12px; }
+.btn { border-radius: 8px; }
+.form-label { font-size: 0.75rem; letter-spacing: 0.05rem; }
+input:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 1000px white inset !important;
+}
+.otp-send-btn { white-space: nowrap; }

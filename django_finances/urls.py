@@ -17,6 +17,11 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
+admin.site.site_url = "/finance/"
+admin.site.site_header = "Tango Finance Administration"
+admin.site.site_title = "Tango Finance Admin"
+admin.site.index_title = "Operations Console"
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('finance/', include('finance.urls')),

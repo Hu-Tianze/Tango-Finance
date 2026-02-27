@@ -7,22 +7,23 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone  
 from django.core.cache import cache  
-from django.db import transaction # 引入事务控制
-from decimal import Decimal, InvalidOperation # 金融级精度处理
+from django.db import transaction
+from django.views.decorators.http import require_POST
 import random
 import csv
 import requests  
 from datetime import date, timedelta
+import os
 
-# 获取自定义用户模型
 User = get_user_model()
 from .models import Transaction, Category
+from .services import create_transaction, update_transaction
 
-# ================= 配置区 =================
-CF_SECRET_KEY = "0x4AAAAAACXuYk6ENN58N_J1xuHxGY69lMA"
+CF_SECRET_KEY = os.getenv("CF_TURNSTILE_SECRET_KEY", "")
 
 def verify_turnstile(token, ip):
-    if not token: return False
+    if not token or not CF_SECRET_KEY:
+        return False
     try:
         response = requests.post(
             "https://challenges.cloudflare.com/turnstile/v0/siteverify",
@@ -33,8 +34,6 @@ def verify_turnstile(token, ip):
     except Exception as e:
         print(f"Cloudflare Error: {e}")
         return False
-
-# ================= 1. 身份验证 (保持现状，逻辑已稳) =================
 
 def register(request):
     if request.method == 'POST':
@@ -73,14 +72,11 @@ def send_code(request):
     code = random.randint(100000, 999999)
     cache.set(f"finance:reg_otp:{email}", code, timeout=600)
     cache.set(lock_key, True, timeout=60)
-    print(f"DEBUG: Register code: {code}")
     return JsonResponse({'status': 'success'})
-
-# ================= 2. 账单核心业务 (高标准 CRUD) =================
 
 @login_required
 def transaction_list(request):
-    # 自动创建基础分类
+    # Create starter categories for first-time users.
     if not Category.objects.filter(user=request.user).exists():
         for cat_name in ['Food', 'Transport', 'Housing', 'Shopping', 'Entertainment']:
             Category.objects.get_or_create(user=request.user, name=cat_name, type_scope='Expense')
@@ -92,7 +88,6 @@ def transaction_list(request):
     month_income = month_qs.filter(type='Income').aggregate(Sum('amount_in_gbp'))['amount_in_gbp__sum'] or 0
     month_expense = month_qs.filter(type='Expense').aggregate(Sum('amount_in_gbp'))['amount_in_gbp__sum'] or 0
     
-    # 金融计算建议始终使用 Decimal 或在聚合后处理
     month_net = month_income - month_expense
 
     expense_stats = month_qs.filter(type='Expense').values('category__name').annotate(total=Sum('amount_in_gbp'))
@@ -114,59 +109,51 @@ def transaction_list(request):
 def add_transaction(request):
     if request.method == 'POST':
         try:
-            # 1. 数据清洗与初步校验
-            amount_raw = request.POST.get('amount')
-            amount = Decimal(amount_raw)
-            if amount <= 0: raise ValueError("Amount must be positive")
-            
             cat_id = request.POST.get('category')
-            # 越权校验：确保分类属于当前用户
             category = get_object_or_404(Category, id=cat_id, user=request.user) if cat_id else None
 
-            # 2. 开启原子事务
             with transaction.atomic():
-                Transaction.objects.create(
+                create_transaction(
                     user=request.user,
                     category=category,
-                    original_amount=amount,
+                    amount=request.POST.get('amount'),
                     currency=request.POST.get('currency', 'GBP'),
                     occurred_at=request.POST.get('date') or timezone.now(),
-                    note=request.POST.get('note', '')[:200], # 截断过长备注
-                    type=request.POST.get('type')
+                    note=request.POST.get('note', ''),
+                    tx_type=request.POST.get('type'),
                 )
                 messages.success(request, "Record added.")
-        except (InvalidOperation, ValueError):
+        except ValueError:
             messages.error(request, "Invalid amount format.")
-        except Exception as e:
+        except Exception:
             messages.error(request, "Failed to add record.")
             
     return redirect('finance:transaction_list')
 
 @login_required
 def edit_transaction(request, tid):
-    # 严格所有权校验
     item = get_object_or_404(Transaction, id=tid, user=request.user)
     
     if request.method == 'POST':
         try:
             with transaction.atomic():
-                # 使用 select_for_update() 实现并发行锁
                 locked_item = Transaction.objects.select_for_update().get(id=tid)
-                
-                amount = Decimal(request.POST.get('amount'))
-                if amount <= 0: raise ValueError
-                
-                locked_item.original_amount = amount
-                locked_item.currency = request.POST.get('currency')
-                locked_item.type = request.POST.get('type')
-                locked_item.occurred_at = request.POST.get('date')
-                locked_item.note = request.POST.get('note', '')[:200]
-                
+
                 cat_id = request.POST.get('category')
-                locked_item.category = get_object_or_404(Category, id=cat_id, user=request.user) if cat_id else None
-                
-                locked_item.save()
+                category = get_object_or_404(Category, id=cat_id, user=request.user) if cat_id else None
+
+                update_transaction(
+                    tx=locked_item,
+                    amount=request.POST.get('amount'),
+                    currency=request.POST.get('currency'),
+                    tx_type=request.POST.get('type'),
+                    note=request.POST.get('note', ''),
+                    occurred_at=request.POST.get('date'),
+                    category=category,
+                )
                 messages.success(request, "Updated successfully!")
+        except ValueError:
+            messages.error(request, "Update failed. Check your input.")
         except Exception:
             messages.error(request, "Update failed. Check your input.")
         return redirect('finance:transaction_list')
@@ -181,15 +168,13 @@ def edit_transaction(request, tid):
     })
 
 @login_required
+@require_POST
 def delete_transaction(request, tid):
-    # 带有所有权检查的删除逻辑
     item = get_object_or_404(Transaction, id=tid, user=request.user)
     with transaction.atomic():
         item.delete()
     messages.success(request, "Record deleted.")
     return redirect('finance:transaction_list')
-
-# ================= 3. 个人中心与账户安全 (分布式锁优化) =================
 
 @login_required
 def profile_view(request):
@@ -208,14 +193,14 @@ def add_category(request):
     if request.method == 'POST':
         name = request.POST.get('cat_name', '').strip()
         if name:
-            # 防止重复创建同名分类
             Category.objects.get_or_create(user=request.user, name=name, type_scope='Expense')
     return redirect('finance:profile')
 
 @login_required
+@require_POST
 def delete_category(request, cat_id):
     category = get_object_or_404(Category, id=cat_id, user=request.user)
-    # 高标准：级联策略。这里我们选择将相关账单设为 None 而不是删除账单
+    # Keep transactions and clear category rather than deleting records.
     with transaction.atomic():
         Transaction.objects.filter(category=category).update(category=None)
         category.delete()
@@ -234,13 +219,11 @@ def send_delete_code(request):
     code = f"{random.randint(100000, 999999)}"
     cache.set(f"finance:del_otp:{request.user.id}", code, timeout=300)
     cache.set(lock_key, True, timeout=60)
-    print(f"DEBUG Delete OTP: {code}") 
     return JsonResponse({'status': 'success'})
 
 @login_required
 def delete_account(request):
     if request.method == 'POST':
-        # 引入分布式锁，防止并发重复删除请求
         lock_id = f"lock:delete_user:{request.user.id}"
         with cache.lock(lock_id, timeout=10, blocking=False) as acquired:
             if not acquired:
@@ -272,7 +255,6 @@ def send_pwd_code(request):
     code = f"{random.randint(100000, 999999)}"
     cache.set(f"finance:pwd_otp:{request.user.id}", code, timeout=300)
     cache.set(lock_key, True, timeout=60)
-    print(f"DEBUG Password OTP: {code}") 
     return JsonResponse({'status': 'success'})
 
 @login_required
@@ -297,15 +279,12 @@ def change_password(request):
             messages.error(request, "Invalid code.")
     return redirect('finance:profile')
 
-# ================= 4. 导出 (保持现状) =================
-
 @login_required
 def export_csv(request):
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = f'attachment; filename="tango_{date.today()}.csv"'
     writer = csv.writer(response)
     writer.writerow(['Date', 'Type', 'Category', 'Amount', 'Currency', 'Amount(GBP)', 'Note'])
-    # 增加排序确保导出数据一致性
     for t in Transaction.objects.filter(user=request.user).order_by('-occurred_at'):
         writer.writerow([t.occurred_at, t.type, t.category.name if t.category else 'General',
                          t.original_amount, t.currency, t.amount_in_gbp, t.note])

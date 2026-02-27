@@ -1,0 +1,121 @@
+:root {
+    --app-sidebar-width: 250px;
+    --app-sidebar-bg: #0f172a;
+    --app-sidebar-muted: #94a3b8;
+    --app-sidebar-active: #1d4ed8;
+}
+
+.app-shell {
+    min-height: 100vh;
+}
+
+.app-sidebar {
+    width: var(--app-sidebar-width);
+    background: linear-gradient(180deg, var(--app-sidebar-bg) 0%, #111827 100%);
+    color: #fff;
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    overflow-y: auto;
+    z-index: 1030;
+    transition: transform 0.25s ease;
+}
+
+.app-brand {
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.app-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: #dbeafe;
+    text-decoration: none;
+    border-radius: 0.5rem;
+    padding: 0.55rem 0.75rem;
+    margin-bottom: 0.35rem;
+}
+
+.app-nav-link:hover {
+    background: rgba(59, 130, 246, 0.18);
+    color: #fff;
+}
+
+.app-nav-link.active {
+    background: var(--app-sidebar-active);
+    color: #fff;
+}
+
+.app-nav-muted {
+    color: var(--app-sidebar-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.app-main {
+    margin-left: var(--app-sidebar-width);
+    width: calc(100% - var(--app-sidebar-width));
+    transition: margin-left 0.25s ease, width 0.25s ease;
+}
+
+.app-main-content {
+    padding: 1.5rem;
+}
+
+.mobile-topbar {
+    display: none;
+}
+
+#sidebarToggleBtn {
+    position: fixed;
+    top: 14px;
+    left: calc(var(--app-sidebar-width) - 16px);
+    z-index: 1040;
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    border: 0;
+    background: #1d4ed8;
+    color: #fff;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
+}
+
+body.sidebar-collapsed .app-sidebar {
+    transform: translateX(calc(-1 * var(--app-sidebar-width)));
+}
+
+body.sidebar-collapsed .app-main {
+    margin-left: 0;
+    width: 100%;
+}
+
+body.sidebar-collapsed #sidebarToggleBtn {
+    left: 12px;
+}
+
+@media (max-width: 767.98px) {
+    .app-sidebar {
+        display: none;
+    }
+
+    .app-main {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .mobile-topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #0f172a;
+        color: #fff;
+        padding: 0.75rem 1rem;
+    }
+
+    #sidebarToggleBtn {
+        display: none;
+    }
+}
