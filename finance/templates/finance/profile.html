@@ -172,7 +172,7 @@
                     <p class="small text-muted mb-3">Verification for: <strong>{{ user.email }}</strong></p>
 
                     <div class="mb-3 border-bottom pb-3">
-                        <div class="cf-turnstile" data-sitekey="0x4AAAAAACXuYkMEKTmY4upa"></div>
+                        <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}"></div>
                     </div>
 
                     <div class="mb-3">
@@ -210,7 +210,7 @@
                     <p class="small text-muted mb-3">Verify deletion for: <strong>{{ user.email }}</strong></p>
 
                     <div class="mb-3 border-bottom pb-3">
-                        <div class="cf-turnstile" data-sitekey="0x4AAAAAACXuYkMEKTmY4upa"></div>
+                        <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}"></div>
                     </div>
 
                     <div class="mb-3 mt-3">

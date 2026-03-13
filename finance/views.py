@@ -25,6 +25,7 @@ from .services import create_transaction, update_transaction
 from user.models import EmailOTP as UserEmailOTP
 
 CF_SECRET_KEY = os.getenv("CF_TURNSTILE_SECRET_KEY", "")
+CF_SITE_KEY = os.getenv("CF_TURNSTILE_SITE_KEY", "0x4AAAAAACXuYkMEKTmY4upa")
 logger = logging.getLogger(__name__)
 
 def verify_turnstile(token, ip):
@@ -42,6 +43,7 @@ def verify_turnstile(token, ip):
         return False
 
 def register(request):
+    context = {"turnstile_site_key": CF_SITE_KEY}
     if request.method == 'POST':
         email = request.POST.get('email')
         nickname = request.POST.get('name') 
@@ -53,7 +55,7 @@ def register(request):
         
         if not real_code or code_input != str(real_code):
             messages.error(request, "Code has expired or is incorrect.")
-            return render(request, 'registration/register.html')
+            return render(request, 'registration/register.html', context)
 
         if User.objects.filter(email=email).exists():
             messages.info(request, "Email already registered.")
@@ -63,13 +65,13 @@ def register(request):
             validate_password(password)
         except ValidationError as exc:
             messages.error(request, " ".join(exc.messages))
-            return render(request, 'registration/register.html')
+            return render(request, 'registration/register.html', context)
 
         User.objects.create_user(email=email, password=password, name=nickname)
         cache.delete(otp_key)
         messages.success(request, "Register success!")
         return redirect('login')
-    return render(request, 'registration/register.html')
+    return render(request, 'registration/register.html', context)
 
 @require_POST
 def send_code(request):
@@ -222,6 +224,7 @@ def profile_view(request):
         'month_income': month_income,
         'month_expense': month_expense,
         'month_net': month_net,
+        'turnstile_site_key': CF_SITE_KEY,
     })
 
 @login_required
