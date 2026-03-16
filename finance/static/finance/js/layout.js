@@ -15,6 +15,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const panel = menu.querySelector('[data-account-menu-panel]');
             const trigger = menu.querySelector('[data-account-menu-toggle]');
             if (!panel || !trigger) return;
+            const rect = trigger.getBoundingClientRect();
+            const panelWidth = Math.min(340, window.innerWidth - 24);
+            const rightEdge = window.innerWidth - rect.right;
+            panel.style.top = (rect.bottom + 8) + 'px';
+            panel.style.right = Math.max(8, rightEdge) + 'px';
+            panel.style.width = panelWidth + 'px';
             panel.hidden = false;
             trigger.setAttribute('aria-expanded', 'true');
         };
