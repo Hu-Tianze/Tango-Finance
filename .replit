@@ -9,7 +9,8 @@ deploymentTarget = "autoscale"
 build = ["bash", "build.sh"]
 
 [nix]
-packages = ["cacert", "freetype", "lcms2", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "openjpeg", "pgadmin4", "tcl", "tk", "zlib", "zip"]
+packages = ["cacert", "freetype", "lcms2", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "openjpeg", "pgadmin4", "tcl", "tk", "zip", "zlib"]
+channel = "stable-25_05"
 
 [workflows]
 runButton = "Project"
