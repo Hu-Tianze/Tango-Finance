@@ -38,12 +38,14 @@ class UserAdmin(BaseUserAdmin):
             self.message_user(request, f"Banned {updated} user(s).")
 
     ban_users.short_description = "Ban selected users (disable account)"
+    ban_users.allowed_permissions = ('change',)
 
     def unban_users(self, request, queryset):
         updated = queryset.update(is_active=True)
         self.message_user(request, f"Unbanned {updated} user(s).")
 
     unban_users.short_description = "Unban selected users (enable account)"
+    unban_users.allowed_permissions = ('change',)
 
 
 @admin.register(EmailOTP)

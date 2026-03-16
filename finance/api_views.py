@@ -2,6 +2,7 @@ import requests
 import json
 from django.conf import settings
 from django.urls import reverse
+from django.core.cache import cache
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -11,6 +12,7 @@ from django.db import transaction, models, DatabaseError
 from django.utils import timezone
 from datetime import timedelta, date
 from decimal import Decimal
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import logging
 from .services import create_transaction
 from .serializers import AgentTransactionRequestSerializer, ChatQuerySerializer
@@ -21,6 +23,15 @@ from .constants import (
     ASSISTANT_NOTE_PREFIX_CHAT,
     ASSISTANT_NOTE_PREFIX_AGENT,
 )
+
+
+def _api_rate_limited(user_id, action, limit=20, window=60):
+    key = f"api_rl:{action}:{user_id}"
+    count = cache.get(key, 0)
+    if count >= limit:
+        return True
+    cache.set(key, count + 1, timeout=window)
+    return False
 
 logger = logging.getLogger(__name__)
 
@@ -33,10 +44,14 @@ def api_error(message, status_code, code):
 
 
 def serializer_error(serializer, code="validation_error"):
-    # Return first field-level error in a compact, client-friendly format.
-    field, errors = next(iter(serializer.errors.items()))
-    msg = errors[0] if isinstance(errors, list) and errors else "Invalid input"
-    return api_error(f"{field}: {msg}", 400, code)
+    parts = []
+    for field, errors in serializer.errors.items():
+        if isinstance(errors, list):
+            for e in errors:
+                parts.append(f"{field}: {e}" if not isinstance(e, dict) else f"{field}: invalid")
+        else:
+            parts.append(f"{field}: invalid")
+    return api_error("; ".join(parts) if parts else "Invalid input", 400, code)
 
 
 class AgentTransactionAPI(APIView):
@@ -44,6 +59,8 @@ class AgentTransactionAPI(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        if _api_rate_limited(request.user.id, 'agent_tx', limit=30, window=60):
+            return api_error("Too many requests", 429, "rate_limited")
         serializer = AgentTransactionRequestSerializer(data=request.data)
         if not serializer.is_valid():
             return serializer_error(serializer, "invalid_payload")
@@ -74,6 +91,8 @@ class ChatAgentAPI(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        if _api_rate_limited(request.user.id, 'chat', limit=10, window=60):
+            return api_error("Too many requests", 429, "rate_limited")
         serializer = ChatQuerySerializer(data=request.data)
         if not serializer.is_valid():
             return serializer_error(serializer, "invalid_payload")
@@ -121,11 +140,16 @@ class ChatAgentAPI(APIView):
             response = requests.post(base_url, json=payload, headers=headers, timeout=AI_CHAT_TIMEOUT_SECONDS)
             response.raise_for_status()
             res_json = response.json()
-            ai_content = res_json['choices'][0]['message']['content']
+            choices = res_json.get('choices') or []
+            if not choices:
+                raise ValueError("Empty choices in AI response")
+            ai_content = choices[0].get('message', {}).get('content', '')
+            if not ai_content:
+                raise ValueError("Empty content in AI response")
             ai_data = json.loads(ai_content)
 
             if ai_data.get('action') == 'record':
-                record_data = ai_data.get('data')
+                record_data = ai_data.get('data') or {}
                 # Persist through shared service to reuse canonical validation/normalization.
                 with transaction.atomic():
                     cat_name = record_data.get('category', 'General')
@@ -140,8 +164,13 @@ class ChatAgentAPI(APIView):
                         category_name=cat_name,
                         type_context=f"{user_query} {record_data.get('note', '')} {cat_name}",
                     )
+                try:
+                    user_tz = ZoneInfo(request.user.preferred_timezone or 'UTC')
+                except ZoneInfoNotFoundError:
+                    user_tz = ZoneInfo('UTC')
+                occurred_at_local = new_tx.occurred_at.astimezone(user_tz)
                 return Response({
-                    "type": "record", 
+                    "type": "record",
                     "message": f"{ASSISTANT_NAME} recorded {new_tx.currency} {new_tx.original_amount} under {cat_name}.",
                     "transaction": {
                         "id": new_tx.id,
@@ -151,8 +180,8 @@ class ChatAgentAPI(APIView):
                         "currency": new_tx.currency,
                         "original_amount": f"{new_tx.original_amount:.2f}",
                         "amount_in_gbp": f"{new_tx.amount_in_gbp:.2f}",
-                        "occurred_at_short": timezone.localtime(new_tx.occurred_at).strftime("%b %d, %H:%M"),
-                        "occurred_at_full": timezone.localtime(new_tx.occurred_at).strftime("%b %d, %Y"),
+                        "occurred_at_short": occurred_at_local.strftime("%b %d, %H:%M"),
+                        "occurred_at_full": occurred_at_local.strftime("%b %d, %Y"),
                         "edit_url": reverse("finance:edit_transaction", args=[new_tx.id]),
                         "delete_url": reverse("finance:delete_transaction", args=[new_tx.id]),
                     },
@@ -182,8 +211,12 @@ class DashboardStateAPI(APIView):
         base_items = Transaction.objects.filter(user=request.user).select_related("category")
         today = date.today()
         month_qs = base_items.filter(occurred_at__year=today.year, occurred_at__month=today.month)
-        month_income = month_qs.filter(type='Income').aggregate(models.Sum('amount_in_gbp'))['amount_in_gbp__sum'] or Decimal("0")
-        month_expense = month_qs.filter(type='Expense').aggregate(models.Sum('amount_in_gbp'))['amount_in_gbp__sum'] or Decimal("0")
+        month_totals = month_qs.aggregate(
+            income=models.Sum('amount_in_gbp', filter=models.Q(type='Income')),
+            expense=models.Sum('amount_in_gbp', filter=models.Q(type='Expense')),
+        )
+        month_income = month_totals['income'] or Decimal("0")
+        month_expense = month_totals['expense'] or Decimal("0")
         month_net = month_income - month_expense
 
         max_total = max(month_income, month_expense, Decimal("1"))

@@ -21,7 +21,8 @@ import logging
 import secrets
 import csv
 import json
-import requests  
+import smtplib
+import requests
 from datetime import date, timedelta
 import hashlib
 from decimal import Decimal, InvalidOperation
@@ -354,21 +355,34 @@ def register(request):
         "register_form": register_form,
     }
     if request.method == 'POST':
-        email = request.POST.get('email')
-        nickname = request.POST.get('name') 
+        email = (request.POST.get('email') or '').strip()
+        nickname = request.POST.get('name')
         password = request.POST.get('password')
         code_input = request.POST.get('code')
         register_form.update({
-            "email": (email or "").strip(),
+            "email": email,
             "name": (nickname or "").strip(),
             "code": (code_input or "").strip(),
         })
-        
+
+        try:
+            validate_email(email)
+        except ValidationError:
+            messages.error(request, "Invalid email address.")
+            return render(request, 'registration/register.html', context)
+
+        attempt_key = f"finance:reg_otp_attempts:{email}"
+        attempts = cache.get(attempt_key, 0)
+        if attempts >= 5:
+            messages.error(request, "Too many failed attempts. Please request a new code.")
+            return render(request, 'registration/register.html', context)
+
         otp_key = f"finance:reg_otp:{email}"
         stored_hash = cache.get(otp_key)
         input_hash = hashlib.sha256((code_input or "").encode("utf-8")).hexdigest()
 
         if not stored_hash or input_hash != stored_hash:
+            cache.set(attempt_key, attempts + 1, timeout=OTP_REGISTER_TTL_SECONDS)
             messages.error(request, "Code has expired or is incorrect.")
             return render(request, 'registration/register.html', context)
 
@@ -436,7 +450,7 @@ def send_code(request):
             purpose="register",
             ttl_seconds=OTP_REGISTER_TTL_SECONDS,
         )
-    except Exception:
+    except (smtplib.SMTPException, OSError):
         logger.exception("Failed to send registration OTP email")
         cache.delete(f"finance:reg_otp:{email}")
         cache.delete(lock_key)
@@ -608,14 +622,18 @@ def profile_view(request):
     today = date.today()
     month_qs = items.filter(occurred_at__year=today.year, occurred_at__month=today.month)
 
-    month_income = month_qs.filter(type='Income').aggregate(Sum('amount_in_gbp'))['amount_in_gbp__sum'] or 0
-    month_expense = month_qs.filter(type='Expense').aggregate(Sum('amount_in_gbp'))['amount_in_gbp__sum'] or 0
+    month_totals = month_qs.aggregate(
+        income=Sum('amount_in_gbp', filter=Q(type='Income')),
+        expense=Sum('amount_in_gbp', filter=Q(type='Expense')),
+    )
+    month_income = month_totals['income'] or Decimal("0")
+    month_expense = month_totals['expense'] or Decimal("0")
     month_net = month_income - month_expense
 
     bar_base = max(month_income, month_expense, Decimal("0.01"))
-    income_bar = round(float(Decimal(str(month_income)) / Decimal(str(bar_base)) * 100), 1)
-    expense_bar = round(float(Decimal(str(month_expense)) / Decimal(str(bar_base)) * 100), 1)
-    net_bar = round(min(float(abs(Decimal(str(month_net))) / Decimal(str(bar_base)) * 100), 100), 1)
+    income_bar = round(float(month_income / bar_base * 100), 1)
+    expense_bar = round(float(month_expense / bar_base * 100), 1)
+    net_bar = round(min(float(abs(month_net) / bar_base * 100), 100), 1)
 
     return render(request, 'finance/profile.html', {
         'user_categories': user_categories,
@@ -676,7 +694,7 @@ def send_delete_code(request):
             purpose="delete_account",
             ttl_seconds=OTP_ACCOUNT_ACTION_TTL_SECONDS,
         )
-    except Exception:
+    except (smtplib.SMTPException, OSError):
         logger.exception("Failed to send delete-account OTP email for user_id=%s", request.user.id)
         cache.delete(f"finance:del_otp:{request.user.id}")
         cache.delete(lock_key)
@@ -703,15 +721,23 @@ def delete_account(request):
             stored_hash = cache.get(otp_key)
             input_hash = hashlib.sha256((input_code or "").encode("utf-8")).hexdigest()
 
+            del_attempt_key = f"finance:del_otp_attempts:{request.user.id}"
+            del_attempts = cache.get(del_attempt_key, 0)
+            if del_attempts >= 5:
+                messages.error(request, "Too many failed attempts. Please request a new code.")
+                return redirect('finance:profile')
+
             if stored_hash and input_hash == stored_hash:
                 with transaction.atomic():
                     UserEmailOTP.objects.filter(
                         email=request.user.email, purpose="delete_account", used_at__isnull=True
                     ).order_by("-created_at").update(used_at=timezone.now())
                     cache.delete(otp_key)
+                    cache.delete(del_attempt_key)
                     request.user.delete()
                 return redirect('login')
             else:
+                cache.set(del_attempt_key, del_attempts + 1, timeout=OTP_ACCOUNT_ACTION_TTL_SECONDS)
                 messages.error(request, "Invalid code.")
     return redirect('finance:profile')
 
@@ -742,7 +768,7 @@ def send_pwd_code(request):
             purpose="change_password",
             ttl_seconds=OTP_ACCOUNT_ACTION_TTL_SECONDS,
         )
-    except Exception:
+    except (smtplib.SMTPException, OSError):
         logger.exception("Failed to send password OTP email for user_id=%s", request.user.id)
         cache.delete(f"finance:pwd_otp:{request.user.id}")
         cache.delete(lock_key)

@@ -129,7 +129,7 @@ class RiskAlert(models.Model):
     ]
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="risk_alerts")
-    transaction = models.OneToOneField(Transaction, on_delete=models.CASCADE, related_name="risk_alert")
+    transaction = models.OneToOneField(Transaction, on_delete=models.SET_NULL, null=True, blank=True, related_name="risk_alert")
     risk_level = models.CharField(max_length=10, choices=LEVEL_CHOICES, default="LOW")
     risk_score = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="OPEN")
