@@ -133,10 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
         Array.from(stack.querySelectorAll('.app-toast')).forEach((toast, index) => {
             const closeBtn = toast.querySelector('.btn-close');
             if (closeBtn) {
-                closeBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    dismissToast(toast);
-                });
+                closeBtn.addEventListener('click', () => dismissToast(toast));
             }
             setTimeout(() => dismissToast(toast), 5000 + index * 400);
         });
