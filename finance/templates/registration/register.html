@@ -40,6 +40,12 @@
                             >
                         </div>
 
+                        {% if turnstile_enabled %}
+                        <div class="mb-3">
+                            <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}"></div>
+                        </div>
+                        {% endif %}
+
                         <div class="mb-3">
                             <button type="button" id="send-btn" class="btn btn-outline-primary">Get a One-Time Code</button>
                         </div>
@@ -83,12 +89,6 @@
                                 <li id="rule-special" class="invalid">Contains a special character (!@#$...)</li>
                             </ul>
                         </div>
-
-                        {% if turnstile_enabled %}
-                        <div class="mb-3">
-                            <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}"></div>
-                        </div>
-                        {% endif %}
 
                         <button type="submit" id="register-submit-btn" class="btn btn-primary w-100" disabled>Register Now</button>
                     </form>

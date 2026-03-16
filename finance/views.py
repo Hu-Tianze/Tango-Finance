@@ -46,7 +46,6 @@ from user.models import EmailOTP as UserEmailOTP
 
 CF_SECRET_KEY = settings.CF_TURNSTILE_SECRET_KEY
 CF_SITE_KEY = settings.CF_TURNSTILE_SITE_KEY
-TURNSTILE_ENABLED = getattr(settings, "TURNSTILE_ENABLED", True)
 logger = logging.getLogger(__name__)
 
 
@@ -59,7 +58,7 @@ def signout_view(request):
 def verify_turnstile(token, ip):
     if settings.DEBUG:
         return True
-    if not TURNSTILE_ENABLED:
+    if not settings.TURNSTILE_ENABLED:
         return True
     if not token or not CF_SECRET_KEY:
         return False
@@ -351,7 +350,7 @@ def register(request):
     }
     context = {
         "turnstile_site_key": CF_SITE_KEY,
-        "turnstile_enabled": TURNSTILE_ENABLED,
+        "turnstile_enabled": settings.TURNSTILE_ENABLED,
         "register_form": register_form,
     }
     if request.method == 'POST':
@@ -644,7 +643,7 @@ def profile_view(request):
         'expense_bar': expense_bar,
         'net_bar': net_bar,
         'turnstile_site_key': CF_SITE_KEY,
-        'turnstile_enabled': TURNSTILE_ENABLED,
+        'turnstile_enabled': settings.TURNSTILE_ENABLED,
         'currency_choices': currency_choices,
         'timezone_choices': timezone_choices,
     })
