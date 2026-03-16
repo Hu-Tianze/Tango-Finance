@@ -55,6 +55,11 @@ ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', '127.0.0.1,localh
 RENDER_EXTERNAL_HOSTNAME = os.getenv("RENDER_EXTERNAL_HOSTNAME")
 if RENDER_EXTERNAL_HOSTNAME and RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+REPLIT_DOMAINS = os.getenv("REPLIT_DOMAINS", "")
+for _domain in REPLIT_DOMAINS.split(","):
+    _domain = _domain.strip()
+    if _domain and _domain not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_domain)
 
 CSRF_TRUSTED_ORIGINS = [
     origin.strip() for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if origin.strip()
@@ -63,6 +68,13 @@ if RENDER_EXTERNAL_HOSTNAME:
     render_origin = f"https://{RENDER_EXTERNAL_HOSTNAME}"
     if render_origin not in CSRF_TRUSTED_ORIGINS:
         CSRF_TRUSTED_ORIGINS.append(render_origin)
+for _domain in REPLIT_DOMAINS.split(","):
+    _domain = _domain.strip()
+    if _domain:
+        for _scheme in ("https://", "http://"):
+            _origin = f"{_scheme}{_domain}"
+            if _origin not in CSRF_TRUSTED_ORIGINS:
+                CSRF_TRUSTED_ORIGINS.append(_origin)
 
 
 # Application definition
@@ -131,7 +143,7 @@ if dj_database_url and os.getenv("DATABASE_URL"):
     DATABASES["default"] = dj_database_url.parse(
         os.getenv("DATABASE_URL"),
         conn_max_age=600,
-        ssl_require=True,
+        ssl_require=False,
     )
 
 
