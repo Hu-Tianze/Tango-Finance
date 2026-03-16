@@ -6,6 +6,7 @@ run = "bash scripts/replit_start.sh"
 [deployment]
 run = ["bash", "scripts/replit_start.sh"]
 deploymentTarget = "autoscale"
+build = ["bash", "build.sh"]
 
 [nix]
 packages = ["cacert", "freetype", "lcms2", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "openjpeg", "pgadmin4", "tcl", "tk", "zlib"]
