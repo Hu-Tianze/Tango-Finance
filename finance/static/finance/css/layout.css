@@ -72,10 +72,10 @@ body.page-leaving .profile-shell {
     width: min(340px, calc(100vw - 24px));
     border-radius: 1rem;
     background: rgba(12, 22, 30, 0.985);
-    border: 5px solid red !important;
+    border: 1px solid rgba(204, 226, 236, 0.24);
     box-shadow: 0 22px 48px rgba(0, 0, 0, 0.46);
     padding: 0.72rem;
-    z-index: 999999 !important;
+    z-index: 9000;
 }
 
 .account-menu-email {

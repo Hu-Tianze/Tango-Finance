@@ -769,6 +769,7 @@ body {
     right: 18px;
     bottom: 16px;
     z-index: 1050;
+    pointer-events: none;
 }
 
 .ocean-chat-window {
@@ -840,6 +841,7 @@ body {
     border: 0;
     background: transparent;
     transition: transform 0.62s cubic-bezier(0.19, 0.78, 0.22, 1), opacity 0.62s ease, filter 0.62s ease;
+    pointer-events: auto;
 }
 
 .chat-fab.chat-fab-open {
