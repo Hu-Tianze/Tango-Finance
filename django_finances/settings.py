@@ -262,8 +262,10 @@ TURNSTILE_ENABLED = _to_bool(
     default=(not DEBUG) or RUNNING_TESTS,
 )
 
+_on_replit = bool(os.getenv("REPLIT_DOMAINS", "").strip())
+
 if not DEBUG and not RUNNING_TESTS:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-    SECURE_SSL_REDIRECT = True
+    SECURE_SSL_REDIRECT = not _on_replit
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
