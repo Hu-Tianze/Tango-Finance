@@ -116,7 +116,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }, true);
     }
 
+    function initToasts() {
+        const stack = document.querySelector('.app-toast-stack');
+        if (!stack) return;
+
+        function dismissToast(toast) {
+            if (!toast || !toast.parentNode) return;
+            toast.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(20px)';
+            setTimeout(() => {
+                if (toast.parentNode) toast.remove();
+            }, 260);
+        }
+
+        Array.from(stack.querySelectorAll('.app-toast')).forEach((toast, index) => {
+            const closeBtn = toast.querySelector('.btn-close');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    dismissToast(toast);
+                });
+            }
+            setTimeout(() => dismissToast(toast), 5000 + index * 400);
+        });
+    }
+
     initAccountMenus();
     initLogoutTriggers();
     initPageTransitions();
+    initToasts();
 });
