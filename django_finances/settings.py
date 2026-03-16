@@ -230,8 +230,8 @@ if REDIS_URL:
 else:
     CACHES = {
         "default": {
-            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-            "LOCATION": "tango-local",
+            "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
+            "LOCATION": "/tmp/django_tango_cache",
         }
     }
 

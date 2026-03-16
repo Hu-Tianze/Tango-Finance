@@ -96,5 +96,11 @@ document.addEventListener('DOMContentLoaded', () => {
     [passwordInput, emailInput, nicknameInput, codeInput].forEach((el) => {
         el.addEventListener('input', refreshSubmitState);
     });
-    refreshSubmitState();
+
+    const hadPrefilledValues = !!(emailInput.value.trim() || codeInput.value.trim());
+    if (hadPrefilledValues) {
+        submitBtn.disabled = false;
+    } else {
+        refreshSubmitState();
+    }
 });
