@@ -9,6 +9,9 @@
 
 {% block head_extra %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+{% if turnstile_enabled %}
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -80,6 +83,12 @@
                                 <li id="rule-special" class="invalid">Contains a special character (!@#$...)</li>
                             </ul>
                         </div>
+
+                        {% if turnstile_enabled %}
+                        <div class="mb-3">
+                            <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}"></div>
+                        </div>
+                        {% endif %}
 
                         <button type="submit" id="register-submit-btn" class="btn btn-primary w-100" disabled>Register Now</button>
                     </form>
