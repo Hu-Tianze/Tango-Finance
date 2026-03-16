@@ -122,6 +122,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }, true);
     }
 
+    function initMenuDiagnostics() {
+        const signout = document.querySelector('.account-menu-signout');
+        if (signout) {
+            signout.addEventListener('click', (e) => {
+                console.log('DIAG: Sign out clicked!', e.target, 'defaultPrevented:', e.defaultPrevented);
+            });
+        }
+        const exportLink = document.querySelector('a[data-no-transition="true"]');
+        if (exportLink) {
+            exportLink.addEventListener('click', (e) => {
+                console.log('DIAG: Export CSV clicked!', e.target, 'defaultPrevented:', e.defaultPrevented);
+            });
+        }
+        document.addEventListener('click', (e) => {
+            const panel = e.target.closest('[data-account-menu-panel]');
+            if (panel) {
+                console.log('DIAG: Click inside account panel, target:', e.target.tagName, e.target.className, 'href:', e.target.href || e.target.closest('a')?.href);
+            }
+        });
+    }
+
     function initToasts() {
         const stack = document.querySelector('.app-toast-stack');
         if (!stack) return;
@@ -148,5 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initAccountMenus();
     initLogoutTriggers();
     initPageTransitions();
+    initMenuDiagnostics();
     initToasts();
 });
