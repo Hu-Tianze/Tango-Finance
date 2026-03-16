@@ -406,6 +406,9 @@ def send_code(request):
     except ValidationError:
         return JsonResponse({'status': 'error', 'code': 'invalid_email', 'message': 'Invalid email address'}, status=400)
 
+    if User.objects.filter(email=email).exists():
+        return JsonResponse({'status': 'error', 'code': 'email_taken', 'message': 'This email is already registered. Please sign in.'}, status=409)
+
     lock_key = f"otp_lock:reg:{email}"
     if cache.get(lock_key):
         return JsonResponse({'status': 'error', 'code': 'rate_limited', 'message': f'Wait {OTP_RATE_LIMIT_SECONDS}s.'}, status=429)

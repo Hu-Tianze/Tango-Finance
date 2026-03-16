@@ -87,9 +87,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.prop('disabled', false).text('Get a One-Time Code');
                 if (typeof turnstile !== 'undefined') turnstile.reset();
             }
-        }).fail(() => {
-            alert('Server error. Please try again later.');
+        }).fail((xhr) => {
+            const msg = xhr.responseJSON && xhr.responseJSON.message
+                ? xhr.responseJSON.message
+                : 'Server error. Please try again later.';
+            alert(msg);
             btn.prop('disabled', false).text('Get a One-Time Code');
+            if (typeof turnstile !== 'undefined') turnstile.reset();
         });
     });
 
