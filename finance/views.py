@@ -406,6 +406,10 @@ def send_code(request):
     except ValidationError:
         return JsonResponse({'status': 'error', 'code': 'invalid_email', 'message': 'Invalid email address'}, status=400)
 
+    cf_token = request.POST.get('cf_token', '')
+    if not verify_turnstile(cf_token, request.META.get('REMOTE_ADDR')):
+        return JsonResponse({'status': 'error', 'code': 'turnstile_failed', 'message': 'Security check failed. Please try again.'}, status=403)
+
     if User.objects.filter(email=email).exists():
         return JsonResponse({'status': 'error', 'code': 'email_taken', 'message': 'This email is already registered. Please sign in.'}, status=409)
 
