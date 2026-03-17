@@ -47,3 +47,8 @@ externalPort = 8000
 [agent]
 expertMode = true
 
+[userenv]
+
+[userenv.shared]
+DJANGO_ADMIN_EMAIL = "admin@test.com"
+
