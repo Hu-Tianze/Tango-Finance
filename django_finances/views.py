@@ -1,5 +1,5 @@
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseNotFound, HttpResponseForbidden, HttpResponseBadRequest, HttpResponseServerError
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.http import urlencode
@@ -18,6 +18,10 @@ def _is_api_request(request):
     )
 
 
+def _is_admin_request(request):
+    return request.path.startswith("/admin/")
+
+
 def _friendly_redirect(request, user_message, *, api_status=400, api_code="request_failed"):
     if _is_api_request(request):
         return JsonResponse(
@@ -33,6 +37,8 @@ def _friendly_redirect(request, user_message, *, api_status=400, api_code="reque
 
 
 def bad_request(request, exception):
+    if _is_admin_request(request):
+        return HttpResponseBadRequest()
     return _friendly_redirect(
         request,
         "Request was invalid. Please try again.",
@@ -42,6 +48,8 @@ def bad_request(request, exception):
 
 
 def permission_denied(request, exception):
+    if _is_admin_request(request):
+        return HttpResponseForbidden()
     if _is_api_request(request):
         return JsonResponse(
             {"status": "error", "code": "permission_denied", "message": "Access denied."},
@@ -51,6 +59,8 @@ def permission_denied(request, exception):
 
 
 def page_not_found(request, exception):
+    if _is_admin_request(request):
+        return HttpResponseNotFound()
     return _friendly_redirect(
         request,
         "Page not found. Redirected to dashboard.",
@@ -60,6 +70,8 @@ def page_not_found(request, exception):
 
 
 def server_error(request):
+    if _is_admin_request(request):
+        return HttpResponseServerError()
     return _friendly_redirect(
         request,
         "Unexpected issue occurred. Please retry.",
