@@ -3,14 +3,19 @@
 
 {% block title %}Profile - Tango Finance{% endblock %}
 
+{% block meta_description %}<meta name="description" content="Manage your Tango Finance profile: personal info, categories and account settings.">{% endblock %}
+{% block meta_robots %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'finance/css/profile.css' %}?v=20260316-ocean-profile5">
+<link rel="preload" href="{% static 'finance/css/profile.css' %}?v=20260317-lcp-fix1" as="style">
+<link rel="stylesheet" href="{% static 'finance/css/profile.css' %}?v=20260317-lcp-fix1">
 {% endblock %}
 
 {% block head_extra %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap" as="style" onload="this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap" rel="stylesheet"></noscript>
 {% endblock %}
 
 {% block content %}
@@ -65,7 +70,7 @@
     <div class="profile-grid">
         <aside class="profile-left">
             <section class="profile-glass profile-card identity-card">
-                <div class="identity-avatar">{{ user.name|default:"U"|first|upper }}</div>
+                <div class="identity-avatar" role="img" aria-label="User avatar: {{ user.name|default:'Tango User' }}">{{ user.name|default:"U"|first|upper }}</div>
                 <h1 class="identity-name">{{ user.name|default:"Tango User" }}</h1>
                 <p>{{ user.email }}</p>
                 <div class="identity-badges">
@@ -106,17 +111,17 @@
                 {% csrf_token %}
                 <h3><i class="bi bi-person-gear"></i> Personal Information</h3>
                 <div class="form-grid">
-                    <label>
+                    <label for="id_nickname">
                         <span>Nickname</span>
-                        <input type="text" name="nickname" value="{{ user.name|default:'' }}">
+                        <input type="text" id="id_nickname" name="nickname" value="{{ user.name|default:'' }}" autocomplete="nickname">
                     </label>
-                    <label>
+                    <label for="id_email">
                         <span>Email</span>
-                        <input type="text" value="{{ user.email }}" disabled>
+                        <input type="email" id="id_email" value="{{ user.email }}" disabled aria-readonly="true">
                     </label>
-                    <label>
+                    <label for="id_preferred_currency">
                         <span>Preferred Currency</span>
-                        <select name="preferred_currency">
+                        <select id="id_preferred_currency" name="preferred_currency">
                             {% for code in currency_choices %}
                             <option value="{{ code }}" {% if user.preferred_currency == code %}selected{% endif %}>
                                 {{ code }}
@@ -124,9 +129,9 @@
                             {% endfor %}
                         </select>
                     </label>
-                    <label>
+                    <label for="id_preferred_timezone">
                         <span>Timezone</span>
-                        <select name="preferred_timezone">
+                        <select id="id_preferred_timezone" name="preferred_timezone">
                             {% for tz in timezone_choices %}
                             <option value="{{ tz }}" {% if user.preferred_timezone == tz %}selected{% endif %}>
                                 {{ tz }}
@@ -141,7 +146,8 @@
                 <h3><i class="bi bi-tags"></i> Categories</h3>
                 <form action="{% url 'finance:add_category' %}" method="post" class="category-add-form">
                     {% csrf_token %}
-                    <input type="text" name="cat_name" placeholder="New category" required>
+                    <label for="id_cat_name" class="visually-hidden">New category name</label>
+                    <input type="text" id="id_cat_name" name="cat_name" placeholder="New category" required aria-label="New category name">
                     <button type="submit">Add</button>
                 </form>
                 <div class="category-list">

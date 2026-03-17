@@ -318,8 +318,9 @@ body {
 .identity-card h1,
 .identity-card h2 {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: 1.9rem;
     font-weight: 800;
+    line-height: 1.15;
 }
 
 .identity-card p {
