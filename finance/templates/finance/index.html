@@ -73,7 +73,7 @@
                         <div class="account-menu-avatar">{{ user.name|default:"U"|first|upper }}</div>
                         <div class="account-menu-hello">Hi, {{ user.name|default:"Tango User" }}!</div>
                         <div class="account-menu-actions">
-                            <a href="{% url 'finance:profile' %}#security-section">Settings</a>
+                            <a href="{% url 'finance:profile' %}">Settings</a>
                             <a href="{% url 'finance:export_csv' %}" data-no-transition="true">Export CSV</a>
                         </div>
                         <a href="{% url 'finance:signout' %}" class="account-menu-signout" data-no-transition="true">Sign out</a>
