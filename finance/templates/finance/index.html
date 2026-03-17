@@ -30,6 +30,9 @@
                 <a class="active" href="{% url 'finance:transaction_list' %}">Dashboard</a>
                 <a href="#recent-transactions">Transactions</a>
                 <a href="#kpi-column">Analytics</a>
+                {% if user.is_staff %}
+                <a href="/admin/" target="_blank">Admin</a>
+                {% endif %}
             </nav>
 
             <div class="top-actions">
