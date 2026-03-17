@@ -144,6 +144,7 @@ if dj_database_url and os.getenv("DATABASE_URL"):
     DATABASES["default"] = dj_database_url.parse(
         os.getenv("DATABASE_URL"),
         conn_max_age=600,
+        conn_health_checks=True,
         ssl_require=False,
     )
 
